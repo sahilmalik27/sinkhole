@@ -1,0 +1,89 @@
+{
+  "model_name": "Qwen/Qwen2.5-7B-Instruct",
+  "prompt": "Explain the theory of relativity in simple terms.",
+  "seq_len": 40,
+  "n_layers": 28,
+  "n_heads": 28,
+  "token_texts": [
+    "<|im_start|>",
+    "system",
+    "\n",
+    "You",
+    " are",
+    " Q",
+    "wen",
+    ",",
+    " created",
+    " by",
+    " Alibaba",
+    " Cloud",
+    ".",
+    " You",
+    " are",
+    " a",
+    " helpful",
+    " assistant",
+    ".",
+    "<|im_end|>",
+    "\n",
+    "<|im_start|>",
+    "user",
+    "\n",
+    "Ex",
+    "plain",
+    " the",
+    " theory",
+    " of",
+    " rel",
+    "ativity",
+    " in",
+    " simple",
+    " terms",
+    ".",
+    "<|im_end|>",
+    "\n",
+    "<|im_start|>",
+    "assistant",
+    "\n"
+  ],
+  "spikes": {
+    "threshold": 10.0,
+    "count": 1,
+    "tokens": [
+      {
+        "position": 2,
+        "text": "\n",
+        "score": 38.55158233642578,
+        "channels": [
+          458,
+          2570,
+          2718,
+          2730
+        ]
+      }
+    ]
+  },
+  "sinks": {
+    "count": 1,
+    "sink_heads_count": 598,
+    "tokens": [
+      {
+        "position": 2,
+        "text": "\n",
+        "attn_mass": 0.5508054494857788,
+        "head_count": 754,
+        "total_heads": 784
+      }
+    ]
+  },
+  "overlap": {
+    "tokens": [
+      "\n"
+    ],
+    "jaccard": 1.0
+  },
+  "kv_waste": {
+    "fraction": 0.025,
+    "attn_mass": 0.5514381637962507
+  }
+}
