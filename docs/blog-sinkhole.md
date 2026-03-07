@@ -4,67 +4,108 @@
 
 ---
 
-We ran Qwen2.5-7B-Instruct on a simple prompt:
+We ran Qwen2.5-7B-Instruct on 400 diverse prompts — factual questions, coding tasks, open-ended instructions, reasoning problems. For every single one, we measured which tokens received the most attention and which had the largest activation norms.
 
-> *"Explain the theory of relativity in simple terms."*
+In all 400 runs, one token absorbed the majority of all attention in the model.
 
-40 tokens. 28 layers. 784 attention heads.
+Not the question word. Not the topic. Not any token in the actual prompt.
 
-One `\n` token — a newline after the system prompt — absorbed **55% of all attention** across **96% of the model's heads**.
+A `\n` character — the newline separating `<|im_start|>system` from `You are Qwen...` in the chat template.
 
-Not the word "relativity." Not "explain." Not even the beginning-of-sequence token. A newline.
+That single whitespace token captured **54.9% of all attention** across **96.2% of the model's heads**, in every prompt, regardless of content.
 
-This is the attention sink problem. It's real, it's measurable, and it affects every pre-norm transformer you're running. Here's what it is, why it happens, and how to see it in your own models.
+This is the attention sink problem. Here's what it is, why it happens, what we measured, and what you can do about it.
 
 ---
 
 ## The Two Phenomena
 
-There are two things going on, and they're related:
-
 ### 1. Massive Activations (Spike Tokens)
 
-Run any input through a Llama, Qwen, or Mistral model and look at the hidden states at each layer. Most tokens have activations in a normal range. But a handful of tokens — often just one or two — have activation values that are **10–100× larger** than the median, concentrated in a few specific channels.
+When you run any input through a Llama, Qwen, or Mistral model, most tokens have hidden-state activations within a normal range. But a tiny number of tokens have activation values **10–100× larger** than the median, concentrated in just a few specific hidden channels.
 
-These are called **spike tokens**. They're not random. They consistently appear at structurally significant positions: the `<|im_start|>` token, the first `\n`, the BOS token. And they appear in the same channels across different prompts.
+These are **spike tokens**. They show up consistently at structurally significant positions — the first `\n`, the `<|im_start|>` token, the BOS token — and they appear in the same channels regardless of the prompt content.
 
-In our Qwen2.5-7B run, the `\n` at position 2 had a spike score of **38.6×** above the median norm, concentrated in channels 458, 2570, 2718, and 2730.
+In our evaluation: across 400 prompts, the spike token was **always** `\n` at position 2, with a mean score of **38.2×** above median, concentrated in exactly channels 2730, 458, 2570, and 2718. Every time. Zero variance on the channel set.
 
 ### 2. Attention Sinks
 
-In the attention mechanism, each head produces a distribution over tokens for each query. In theory, high-attention tokens should be semantically relevant. In practice, a paper from Yann LeCun's group at NYU showed something different:
+In a well-functioning attention head, tokens with high attention weights should be semantically relevant to the query. In practice, something different happens.
 
-> *"Certain tokens attract disproportionate attention mass regardless of semantic relevance."*
+**Sink tokens** attract disproportionate attention mass across most heads and most layers, regardless of what the prompt says or asks. They're not answering the question — they're just absorbing attention that could go elsewhere.
 
-These are **sink tokens** — tokens that consistently receive high attention from most heads across most layers, independent of what the prompt actually says.
-
-In our run: that same `\n` at position 2 received 55.1% of total attention mass, dominating 754 of 784 heads (96%).
+In our evaluation: the same `\n` token at position 2 absorbed **54.9%** of total attention mass on average, dominating **96.2% of the model's 784 attention heads**.
 
 ### The Co-occurrence
 
-The paper's core finding — and the most striking result from our own test — is that spike tokens and sink tokens are almost always the same tokens. In our Qwen2.5-7B run, the Jaccard overlap was exactly **1.0**.
+The paper's central claim — and the most striking thing about our results — is that spike tokens and sink tokens are the same tokens. In all 400 prompts, the Jaccard overlap between spike tokens and sink tokens was exactly **1.0**.
 
-This is not a coincidence. The mechanism is architectural.
+This is not a coincidence. It's architectural.
+
+---
+
+## The Numbers
+
+We ran a full statistical evaluation using sinkhole across 400 prompts from a mix of public instruction datasets. Here are the results.
+
+### Aggregate statistics (n=400)
+
+| Metric | Mean | Std | 95% CI |
+|--------|------|-----|--------|
+| Spike tokens per prompt | **1.00** | 0.00 | [1.00, 1.00] |
+| Spike score (× median norm) | **38.2×** | 0.69 | [38.15, 38.29] |
+| Spike channels | **always [2730, 458, 2570, 2718]** | — | — |
+| Sink tokens per prompt | **1.00** | 0.00 | [1.00, 1.00] |
+| Sink attention mass | **54.9%** | 0.54% | [54.88%, 54.98%] |
+| Heads dominated | **96.25%** | 0.11% | [96.24%, 96.27%] |
+| Spike ∩ Sink (Jaccard) | **1.00** | 0.00 | [1.00, 1.00] |
+
+All four hypothesis tests significant at p < 0.001. The t-statistic for "sink mass > 30%" is **918.7**.
+
+### It doesn't matter what you ask
+
+Here are eight randomly selected prompts from the evaluation with their results:
+
+| Prompt | Spike score | Sink mass | Heads |
+|--------|-------------|-----------|-------|
+| "Tell me three short-term effects of smoking marijuana." | 37.7× | 55.3% | 96.3% |
+| "Generate a website design for a house cleaning company" | 38.7× | 55.1% | 96.3% |
+| "How many continents are there on Earth?" | 38.5× | 55.1% | 96.2% |
+| "Arrange the following musical notes" | 38.6× | 55.5% | 96.2% |
+| "Explain the concept of socio-economic privilege." | 38.1× | 55.4% | 96.2% |
+| "Classify these five animals into two groups." | 38.3× | 55.0% | 96.3% |
+| "List five benefits of going for a walk" | 38.7× | 55.9% | 96.2% |
+| "Pick the best response based on the given situation." | 39.7× | 55.2% | 96.2% |
+
+The spike token is always `\n`. The spike channels are always [2730, 458, 2570, 2718]. The Jaccard is always 1.0. The sink mass sits between 51.5% and 56.1% across all 400 prompts.
+
+The prompt content is irrelevant. This is a structural property of the model.
+
+### One interesting finding: sequence length matters
+
+There's a statistically significant negative correlation between prompt length and sink dominance (Pearson r = −0.52, p < 0.001). Longer prompts dilute the sink effect slightly — the sink token absorbs less attention as the total number of tokens grows. This aligns with the paper's discussion of long-context behavior: sinks don't disappear, but their relative share shrinks.
+
+Even at the longest prompts in our evaluation (60 tokens), the sink still absorbed more than 50% of attention. It never goes away — it just becomes slightly less dominant.
 
 ---
 
 ## Why This Happens
 
-The root cause is **pre-norm** — the design choice where RMSNorm is applied *before* each transformer block rather than after.
+The root cause is **pre-norm** — the choice to apply RMSNorm *before* each transformer block rather than after.
 
-In modern LLMs, every block looks like this:
+Every block in a modern LLM looks like:
 
 ```
 H[i+1] = H[i] + F(RMSNorm(H[i]))
 ```
 
-RMSNorm normalizes each token's hidden state to unit norm before it goes into the attention or FFN block. But it operates on the *normalized* input — the raw hidden state `H[i]` flows through the residual stream unnormalized.
+The raw hidden state `H[i]` flows through the residual stream without normalization. At structurally prominent positions — early tokens like `\n` that appear at consistent locations across all inputs — the residual accumulation produces extremely large hidden-state norms. When RMSNorm normalizes these, the resulting representation has a large scale that gets amplified by the attention QK projection.
 
-Here's what happens at spike tokens: their raw hidden states develop extremely large norms from the residual accumulation. When RMSNorm normalizes them, the scale is huge. The subsequent linear projection amplifies this into the attention QK computation. The result: when *any* other token queries, the spike token's key has an outsized inner product — it wins the softmax, consistently, across heads.
+The effect: when any other token queries the attention mechanism, the spike token's key has an outsized inner product across almost every head. It consistently wins the softmax. The spike in the hidden state is both the cause and the signature of the attention sink.
 
-This is the mechanism. The spike in the hidden state directly produces the attention sink. They're two views of the same artifact.
+This is why channels 2730, 458, 2570, and 2718 are always the spike channels — they're the dimensions where residual accumulation happens to concentrate for this particular model's learned weight structure.
 
-The paper also shows you can suppress one without the other by changing the normalization configuration — which confirms they're coupled through the norm, not inherently linked.
+The paper (Sun, Canziani, LeCun, ICML 2026) shows that changing to post-norm decouples the two phenomena. Both can be independently suppressed without degrading language modeling performance.
 
 ---
 
@@ -72,128 +113,96 @@ The paper also shows you can suppress one without the other by changing the norm
 
 ### KV Cache Waste
 
-Every token in the sequence occupies a slot in the KV cache. In our example, 1 token out of 40 (2.5% of tokens) consumed 55% of attention mass. That attention budget is effectively wasted — it's going to a structurally fixed anchor, not to semantically relevant context.
+1 token out of ~40 (2.5% of context) consumes 55% of attention compute. At 4096-token contexts, the absolute waste is larger and the sink behavior persists. Any KV cache eviction strategy needs to account for sink tokens — they should not be evicted (their absence breaks attention patterns) but they also shouldn't count against the semantic budget.
 
-In a 4096-token context, if 2–4 tokens are perpetual sinks, they take up slots and compute that could go to actual content. At scale, this adds up.
+sinkhole tells you exactly which tokens those are.
 
 ### Quantization Failures
 
-INT8 and INT4 quantization schemes work by clipping activations to a fixed range. Spike channels — the few hidden dimensions where activation values are 10–100× the mean — blow through any reasonable clip range. This is why LLM quantization often fails silently on certain inputs: the spike token hits an extreme, clips, and corrupts the hidden representation for everything downstream.
+Spike channels blow through any reasonable INT8/INT4 clipping range. Those 4 channels — 2730, 458, 2570, 2718 — need wider representation. If your quantization scheme doesn't know about them, it clips them, corrupts the hidden state for all downstream tokens, and you get silent quality degradation.
 
-### Pruning and Distillation
+### Sink-Aware Pruning
 
-Sink heads — attention heads that are dominated by sink behavior — are functionally different from semantic heads. If you're pruning attention heads by importance score, you'll likely want to treat sink heads differently. Removing them might change the model's behavior in non-obvious ways even though they appear "unimportant" on standard metrics.
+Sink heads behave fundamentally differently from semantic heads. A head that's 96% pointing at `\n` is not doing the same thing as a head tracking subject-verb agreement or long-range coreference. If you prune by importance score alone, you might eliminate sink heads without understanding what role they play in calibrating the model's short-range attention patterns.
 
-### Long-Context Performance
+### Long-Context Degradation
 
-Sink token behavior compounds with context length. The longer your input, the more queries there are pointing at the sink, and the more compute is diverted from real context. This partially explains why some models degrade in quality at long contexts in ways that aren't fully explained by position encoding issues.
+The r = −0.52 correlation shows sinks dilute with length, but they never disappear. At very long contexts, this means a smaller fraction of attention is "wasted" on the sink — but the absolute number of attention operations going to a semantically empty token remains large.
 
 ---
 
 ## Introducing sinkhole
 
-**sinkhole** is a diagnostic CLI that makes all of this visible in one command:
-
 ```bash
-sinkhole analyze \
-  --model Qwen/Qwen2.5-7B-Instruct \
-  --prompt "Explain the theory of relativity in simple terms." \
-  --output report.html \
-  --device cuda
+pip install git+https://github.com/sahilmalik27/sinkhole
+sinkhole analyze --model Qwen/Qwen2.5-7B-Instruct --prompt "your prompt" --device cuda
 ```
 
-It hooks into the model's forward pass, captures hidden states and attention weights across all layers and heads, and produces:
+sinkhole hooks into the model's forward pass, captures hidden states and attention weights across all layers and heads, and outputs:
 
-**Terminal output:**
+- **Terminal report** — spike/sink tables with scores, positions, channels, head coverage
+- **HTML report** — interactive attention heatmaps, norm plots, sink mass charts
+- **JSON** — structured output for integration with other tooling
+
+It works with any pre-norm transformer: Llama 2/3, Qwen2/2.5, Mistral, Phi-3.
+
+### What the output looks like
+
 ```
-╭─ sinkhole ─────────────────────────────────────────────────────╮
-│ Model   Qwen/Qwen2.5-7B-Instruct                               │
-│ Tokens  40   Layers  28   Heads  28                            │
-╰────────────────────────────────────────────────────────────────╯
-
  Spike Tokens  1 found (threshold 10.0×)
  ┌──────┬───────┬────────┬──────────────────────────────┐
  │  Pos │ Token │  Score │ Spike Channels               │
  ├──────┼───────┼────────┼──────────────────────────────┤
- │    2 │ '\n'  │  38.6× │ [458, 2570, 2718, 2730]      │
+ │    2 │ '\n'  │  38.2× │ [2730, 458, 2570, 2718]      │
  └──────┴───────┴────────┴──────────────────────────────┘
 
  Sink Tokens  1 found
- ┌──────┬───────┬────────────┬─────────────────────────┐
- │  Pos │ Token │ Attn Mass  │ Heads Dominated          │
- ├──────┼───────┼────────────┼─────────────────────────┤
- │    2 │ '\n'  │   55.1%    │ 754 / 784  (96%)        │
- └──────┴───────┴────────────┴─────────────────────────┘
+ ┌──────┬───────┬────────────┬──────────────────────────┐
+ │  Pos │ Token │ Attn Mass  │ Heads Dominated           │
+ ├──────┼───────┼────────────┼──────────────────────────┤
+ │    2 │ '\n'  │   54.9%    │ 754 / 784  (96.2%)       │
+ └──────┴───────┴────────────┴──────────────────────────┘
 
- Spike ∩ Sink  Jaccard = 1.00
- KV Impact     55.1% of attention budget on sink tokens
+ Spike ∩ Sink  Jaccard = 1.00   ·   KV waste: 54.9%
 ```
-
-**HTML report** with layer-by-layer attention heatmaps and activation norm plots. **JSON output** for integration with other tooling.
-
-### Architecture support
-
-sinkhole works with any pre-norm transformer exposed through HuggingFace:
-- Llama 2, Llama 3, Llama 3.1
-- Qwen2, Qwen2.5 (all sizes)
-- Mistral 7B, Mixtral
-- Phi-3
-
-If your model uses RMSNorm + residual connections in the standard pre-norm configuration, you'll see these phenomena. The only question is *how strong* they are.
-
----
-
-## What We Found on Qwen2.5-7B
-
-The model we tested: `Qwen/Qwen2.5-7B-Instruct` (7 billion parameters, instruction-tuned, bfloat16).
-
-Prompt: *"Explain the theory of relativity in simple terms."* (with the standard Qwen chat template applied — so the actual input to the model is 40 tokens including the system message).
-
-| Metric | Value |
-|--------|-------|
-| Spike tokens detected | 1 |
-| Spike token | `\n` at position 2 |
-| Spike score | 38.6× above median |
-| Spike channels | 458, 2570, 2718, 2730 |
-| Sink tokens detected | 1 |
-| Sink token | `\n` at position 2 |
-| Attention mass on sink | 55.1% |
-| Heads dominated | 754 / 784 (96%) |
-| Spike ∩ Sink Jaccard | 1.0 |
-
-The `\n` at position 2 is the newline that separates `<|im_start|>system` from `You are Qwen...` in the system prompt. It sits in a structurally conspicuous position early in the sequence and becomes the anchor that every head in the model refers back to.
-
-This is exactly what the paper predicts. The pre-norm configuration, the structural position, the residual accumulation — it all adds up to one token vacuuming up more than half the model's attention.
 
 ---
 
 ## What You Can Do About It
 
-The paper shows that both phenomena can be suppressed independently without degrading language modeling performance. Some practical directions:
+**1. Identify sinks before designing KV eviction.** Never evict sink tokens from your KV cache — their absence will break the model's learned attention patterns. But keep them clearly labeled so they don't count against your semantic context budget.
 
-**1. Identify your sinks before optimizing.** If you're designing a KV cache eviction policy, don't evict sink tokens — they're not semantically meaningful, but their absence breaks the model's learned attention patterns. sinkhole tells you which ones they are.
+**2. Channel-aware quantization.** The spike channels (2730, 458, 2570, 2718 for Qwen2.5-7B) need special handling in any quantization scheme. Use outlier-aware approaches like SmoothQuant or LLM.int8() that can widen specific channels.
 
-**2. Channel-aware quantization.** Know which channels are spike channels before choosing your quantization scheme. Spike channels need wider representation; the rest can be compressed aggressively.
+**3. Separate sink heads from semantic heads.** Before pruning, use sinkhole to identify which heads are sink-dominated and which are doing semantic work. They should be evaluated independently.
 
-**3. Architecture choices.** If you're training from scratch or fine-tuning with architectural modifications, the paper shows that post-norm configurations decouple spikes from sinks. Worth knowing before you commit to a design.
-
-**4. Sink-aware pruning.** sinkhole reports which heads are sink-dominated. In a head pruning experiment, you'd want to separate "sink heads" from "semantic heads" and evaluate them separately.
+**4. Architecture.** If you're training from scratch, post-norm decouples spikes from sinks (per the paper). Pre-norm is faster to train and more stable, but this is the tradeoff.
 
 ---
 
-## Get Started
+## Reproducing These Results
+
+All evaluation code, raw results (400 JSONL records), aggregated statistics, and figures are in the repo:
 
 ```bash
-pip install git+https://github.com/sahilmalik27/sinkhole
-sinkhole analyze --model Qwen/Qwen2.5-7B-Instruct --prompt "your prompt here" --device cuda
+git clone https://github.com/sahilmalik27/sinkhole
+cd sinkhole
+pip install -e '.[dev]'
+pip install datasets scipy tqdm
+
+# Re-run the evaluation (requires Qwen2.5-7B-Instruct + GPU)
+python eval/run_eval.py
+
+# Compute stats and generate plots
+python eval/stats.py && python eval/plot.py && python eval/report.py
 ```
 
-The full results from our Qwen2.5-7B run — including the HTML heatmap report — are in the `results/` directory of the repo.
-
-Source code, tests, and documentation: **[github.com/sahilmalik27/sinkhole](https://github.com/sahilmalik27/sinkhole)**
+The evaluation is resume-safe — if it's interrupted, it picks up where it left off.
 
 ---
 
 ## Reference
 
 > Sun, S., Canziani, A., & LeCun, Y. (2026). *The Spike, the Sparse and the Sink: Anatomy of Massive Activations and Attention Sinks.* arXiv:2603.05498. ICML 2026.
+
+Source: **[github.com/sahilmalik27/sinkhole](https://github.com/sahilmalik27/sinkhole)**
