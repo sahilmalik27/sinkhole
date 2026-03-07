@@ -1,0 +1,200 @@
+{
+  "n_prompts": 400,
+  "descriptive": {
+    "spike_count": {
+      "mean": 1.0,
+      "std": 0.0,
+      "median": 1.0,
+      "min": 1.0,
+      "max": 1.0,
+      "p5": 1.0,
+      "p25": 1.0,
+      "p75": 1.0,
+      "p95": 1.0,
+      "n": 400,
+      "ci95_low": 1.0,
+      "ci95_high": 1.0
+    },
+    "spike_score_max": {
+      "mean": 38.2217622089386,
+      "std": 0.690122485280351,
+      "median": 38.26390838623047,
+      "min": 35.879940032958984,
+      "max": 39.76356887817383,
+      "p5": 37.01420021057129,
+      "p25": 37.7256965637207,
+      "p75": 38.61787796020508,
+      "p95": 39.36326599121094,
+      "n": 400,
+      "ci95_low": 38.15413020538112,
+      "ci95_high": 38.28939421249608
+    },
+    "spike_score_mean": {
+      "mean": 38.2217622089386,
+      "std": 0.690122485280351,
+      "median": 38.26390838623047,
+      "min": 35.879940032958984,
+      "max": 39.76356887817383,
+      "p5": 37.01420021057129,
+      "p25": 37.7256965637207,
+      "p75": 38.61787796020508,
+      "p95": 39.36326599121094,
+      "n": 400,
+      "ci95_low": 38.15413020538112,
+      "ci95_high": 38.28939421249608
+    },
+    "sink_count": {
+      "mean": 1.0,
+      "std": 0.0,
+      "median": 1.0,
+      "min": 1.0,
+      "max": 1.0,
+      "p5": 1.0,
+      "p25": 1.0,
+      "p75": 1.0,
+      "p95": 1.0,
+      "n": 400,
+      "ci95_low": 1.0,
+      "ci95_high": 1.0
+    },
+    "sink_attn_mass_max": {
+      "mean": 0.5492913399636745,
+      "std": 0.005427060210215411,
+      "median": 0.549728512763977,
+      "min": 0.5147189497947693,
+      "max": 0.5610580444335938,
+      "p5": 0.5395582467317581,
+      "p25": 0.5466140657663345,
+      "p75": 0.5526729822158813,
+      "p95": 0.5565011471509933,
+      "n": 400,
+      "ci95_low": 0.5487594880630734,
+      "ci95_high": 0.5498231918642756
+    },
+    "sink_attn_mass_total": {
+      "mean": 0.5492913399636745,
+      "std": 0.005427060210215411,
+      "median": 0.549728512763977,
+      "min": 0.5147189497947693,
+      "max": 0.5610580444335938,
+      "p5": 0.5395582467317581,
+      "p25": 0.5466140657663345,
+      "p75": 0.5526729822158813,
+      "p95": 0.5565011471509933,
+      "n": 400,
+      "ci95_low": 0.5487594880630734,
+      "ci95_high": 0.5498231918642756
+    },
+    "sink_head_coverage": {
+      "mean": 0.9625382653061223,
+      "std": 0.0011444907793001318,
+      "median": 0.9617346938775511,
+      "min": 0.9604591836734694,
+      "max": 0.9668367346938775,
+      "p5": 0.9617346938775511,
+      "p25": 0.9617346938775511,
+      "p75": 0.9630102040816326,
+      "p95": 0.9642857142857143,
+      "n": 400,
+      "ci95_low": 0.9624261052097509,
+      "ci95_high": 0.9626504254024937
+    },
+    "jaccard": {
+      "mean": 1.0,
+      "std": 0.0,
+      "median": 1.0,
+      "min": 1.0,
+      "max": 1.0,
+      "p5": 1.0,
+      "p25": 1.0,
+      "p75": 1.0,
+      "p95": 1.0,
+      "n": 400,
+      "ci95_low": 1.0,
+      "ci95_high": 1.0
+    },
+    "overlap_count": {
+      "mean": 1.0,
+      "std": 0.0,
+      "median": 1.0,
+      "min": 1.0,
+      "max": 1.0,
+      "p5": 1.0,
+      "p25": 1.0,
+      "p75": 1.0,
+      "p95": 1.0,
+      "n": 400,
+      "ci95_low": 1.0,
+      "ci95_high": 1.0
+    },
+    "seq_len": {
+      "mean": 41.0,
+      "std": 4.042381987185998,
+      "median": 40.0,
+      "min": 33.0,
+      "max": 60.0,
+      "p5": 35.0,
+      "p25": 38.0,
+      "p75": 43.0,
+      "p95": 48.0,
+      "n": 400,
+      "ci95_low": 40.60384656525577,
+      "ci95_high": 41.39615343474423
+    }
+  },
+  "hypothesis_tests": {
+    "jaccard_gt_0": {
+      "test": "one-sample t-test (one-sided)",
+      "h0": "mean Jaccard == 0",
+      "h1": "mean Jaccard > 0",
+      "t_statistic": Infinity,
+      "p_value": 0.0,
+      "significant_at_001": true,
+      "mean": 1.0
+    },
+    "sink_mass_gt_03": {
+      "test": "one-sample t-test (one-sided)",
+      "h0": "mean sink_attn_mass_total <= 0.3",
+      "h1": "mean sink_attn_mass_total > 0.3",
+      "t_statistic": 918.6975279707821,
+      "p_value": 0.0,
+      "significant_at_001": true,
+      "mean": 0.5492913399636745
+    },
+    "spike_position_chi2": {
+      "test": "chi-square goodness-of-fit",
+      "h0": "spike positions uniformly distributed across token types",
+      "h1": "spike positions concentrated at structural tokens",
+      "chi2_statistic": 0.0,
+      "p_value": 1.0,
+      "significant_at_005": false,
+      "type_counts": {
+        "whitespace": 400
+      },
+      "structural_fraction": 1.0
+    },
+    "seq_len_vs_sink_mass_correlation": {
+      "test": "Pearson correlation",
+      "h0": "no linear correlation between seq_len and sink_attn_mass_total",
+      "r": -0.5229316691137851,
+      "p_value": 1.868023747710191e-29,
+      "significant_at_005": true
+    }
+  },
+  "category_sink_count": {
+    "instruction": {
+      "mean": 1.0,
+      "std": 0.0,
+      "median": 1.0,
+      "min": 1.0,
+      "max": 1.0,
+      "p5": 1.0,
+      "p25": 1.0,
+      "p75": 1.0,
+      "p95": 1.0,
+      "n": 400,
+      "ci95_low": 1.0,
+      "ci95_high": 1.0
+    }
+  }
+}
